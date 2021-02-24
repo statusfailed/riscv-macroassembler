@@ -10,6 +10,8 @@ Consider for example the "SB" (store byte) instruction from the
     [   imm[11:5]   |  rs2  |   rs1   |  000  |   imm[4:0]    |    0100011    ]
        offset[11:5]    src     base             offset[4:0]
 
+[riscv-spec]: https://riscv.org/risc-v-isa/
+
 This instruction denotes the operation
 
     Memory[base + offset] ← src
