@@ -184,6 +184,9 @@ def utype(opcode):
 def itype(funct3, opcode):
     return Instruction(32, imm=bits[31:20], rs1=bits[19:15], funct3=bits[14:12:funct3], rd=bits[11:7], opcode=bits[6:0:opcode])
 
+def rtype(funct7, funct3, opcode):
+    return Instruction(32, func7=bits[31:25], rs2=bits[24:20], rs1=bits[19:15], funct3=bits[14:12], rd=bits[11:7], opcode=bits[6:0:opcode])
+
 auipc = utype(0b0010111)
 lui   = utype(0b0110111)
 addi  = itype(0b000, 0b0010011)
@@ -194,6 +197,7 @@ slli  = Instruction(32,
     funct3=bits[14:12:0b001],
     dest=bits[11:7],
     opcode=bits[6:0:0b0010011])
+add = rtype(0x0, 0x0, 0b0110011)
 
 # TODO: check that the "offset" value is encoded correctly!
 store = Instruction(32,
@@ -214,4 +218,5 @@ instructions = dict(
     slli=slli,
     store=store,
     sb=sb,
+    add=add,
 )

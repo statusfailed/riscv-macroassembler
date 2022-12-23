@@ -54,3 +54,8 @@ Probably loads
 - [ ] `Instruction.where`
 - [ ] `make_instruction` helper
 - [ ] Generate instruction encodings using [riscv-opcodes](https://github.com/riscv/riscv-opcodes)
+
+# References
+
+- [Risc-V ISA Reference](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
+    - See Chapter 24 for a table of instruction encodings
