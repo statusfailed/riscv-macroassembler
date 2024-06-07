@@ -34,7 +34,7 @@ prompt and quit using `C-a c`:
 Finally, if you have a RISC-V-aware objdump, you can disassemble the contents of
 `test.bin`:
 
-    $ objdump -b binary --architecture=riscv -D test.bin
+    $ riscv64-linux-gnu-objdump -b binary --architecture=riscv -D test.bin
       0000000000000000 <.data>:
      0:   00100093                li      ra,1
      4:   01c09093                slli    ra,ra,0x1c
@@ -45,9 +45,33 @@ Finally, if you have a RISC-V-aware objdump, you can disassemble the contents of
     18:   06c00113                li      sp,108
     (...snip...)
 
+# Running on `sifive_u`
+
+Running on `sifive_u` is a little different: the UART address is at
+`0x10010000`, and we have to write in word-sized chunks. Run like this:
+
+    $ ./sifive_example.py out.bin
+    $ qemu-system-riscv64 -nographic -M sifive_u -bios out.bin
+    HHeelllloo,,  WWoorrlldd!
+    !
+
+Note the repeated output. I think this is because out.bin writes
+a full word `[0x0, 0x0, 0x0, c]` for each character `c`. **TODO!**
+
+If you try to write in byte-sized chunks to the UART address, you get no output.
+To see an error, run this:
+
+    qemu-system-riscv64 -nographic -M sifive_u -bios out.bin -d guest_errors,unimp,pcall -D qemu.log
+
+Exit using `C-a c quit` and then `head -n 1 qemu.log`:
+
+    Invalid write at addr 0x0, size 1, region 'riscv.sifive.uart', reason: invalid size (min:4 max:4)
+
 # Bugs
 
-Probably loads
+- [ ] Fix `sifive_u` output - write 4 chars at a time? Find some driver docs!
+
+Probably loads more.
 
 # TODO
 
