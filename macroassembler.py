@@ -126,6 +126,10 @@ class Instruction:
     """
     def __init__(self, nbits, **kwargs):
         self.nbits = nbits
+
+        # TODO: provide a way to check that we named all argumenst correctly
+        # Motivation: had a bug where I was passing "imm=..." to "lw", but
+        # should've been passing "offset".
         self.parts = kwargs
 
     def validate(self):
@@ -187,6 +191,41 @@ def itype(funct3, opcode):
 def rtype(funct7, funct3, opcode):
     return Instruction(32, func7=bits[31:25], rs2=bits[24:20], rs1=bits[19:15], funct3=bits[14:12], rd=bits[11:7], opcode=bits[6:0:opcode])
 
+# [rd, PC] ← Δ(RS1 + imm)
+jalr = itype(0b000, 0b1100111)
+
+def btype(funct3, opcode):
+    return Instruction(32,
+        imm=bits[31:31, 7:7, 30:25, 11:8],
+        rs2=bits[24:20],
+        rs1=bits[19:15],
+        funct3=bits[14:12:funct3],
+        opcode=bits[6:0:opcode])
+
+beq = btype(0b000, 0b1100011)
+bne = btype(0b001, 0b1100011)
+
+
+# TODO: FIXME: noncontiguous immediates are broken!
+bne = Instruction(32,
+        imm12=bits[31:31],
+        imm10_5=bits[30:25],
+        imm4_1=bits[11:8],
+        imm11=bits[7:7],
+        rs2=bits[24:20],
+        rs1=bits[19:15],
+        funct3=bits[14:12:0b001],
+        opcode=bits[6:0:0b1100011])
+beq = Instruction(32,
+        imm12=bits[31:31],
+        imm10_5=bits[30:25],
+        imm4_1=bits[11:8],
+        imm11=bits[7:7],
+        rs2=bits[24:20],
+        rs1=bits[19:15],
+        funct3=bits[14:12:0b000],
+        opcode=bits[6:0:0b1100011])
+
 auipc = utype(0b0010111)
 lui   = utype(0b0110111)
 addi  = itype(0b000, 0b0010011)
@@ -198,6 +237,20 @@ slli  = Instruction(32,
     dest=bits[11:7],
     opcode=bits[6:0:0b0010011])
 add = rtype(0x0, 0x0, 0b0110011)
+
+
+load = Instruction(32,
+    offset=bits[31:20],
+    base=bits[19:15],
+    width=bits[14:12],
+    dest=bits[11:7],
+    opcode=bits[6:0:0b11])
+
+lb = Instruction(load.nbits, **{k: v for k, v in load.parts.items()}) # same as store...
+lb.parts['width'] = bits[14:12:0] # ... but funct3 bits are fixed.
+
+lw = Instruction(load.nbits, **{k: v for k, v in load.parts.items()})
+lw.parts['width'] = bits[14:12:0b010]
 
 # TODO: check that the "offset" value is encoded correctly!
 store = Instruction(32,
@@ -211,12 +264,26 @@ store = Instruction(32,
 sb = Instruction(store.nbits, **{k: v for k, v in store.parts.items()})
 sb.parts['width'] = bits[14:12:0]
 
+csrrs = Instruction(32,
+    csr=bits[31:20],
+    rs1=bits[19:15],
+    funct3=bits[14:12:0b010],
+    rd=bits[11:7],
+    opcode=bits[6:0:0b1110011])
+
 instructions = dict(
     auipc=auipc,
+    jalr=jalr,
+    beq=beq,
+    bne=bne,
     lui=lui,
     addi=addi,
     slli=slli,
+    load=load,
+    lb=lb,
+    lw=lw,
     store=store,
     sb=sb,
     add=add,
+    csrrs=csrrs,
 )

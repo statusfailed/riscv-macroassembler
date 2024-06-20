@@ -67,6 +67,35 @@ Exit using `C-a c quit` and then `head -n 1 qemu.log`:
 
     Invalid write at addr 0x0, size 1, region 'riscv.sifive.uart', reason: invalid size (min:4 max:4)
 
+# Debugging
+
+Install a RISC-V-compatible gdb, e.g. on arch:
+
+    pacman -S riscv64-linux-gnu-gdb
+
+Run QEMU in debug mode:
+
+    qemu-system-riscv64 -nographic -M sifive_u -bios out.bin -s -S
+
+Connect to gdb:
+
+    riscv64-linux-gnu-gdb
+
+Run this in gdb:
+
+    target remote :1234
+    layout asm
+
+If you want to skip the bootloader(?) and go straight to your code from
+`out.bin`, you can also run
+
+    b *0x80000000
+    c
+
+Instead of typing this all out, you can also just do this:
+
+    riscv64-linux-gnu-gdb -x start.gdb
+
 # Bugs
 
 - [ ] Fix `sifive_u` output - write 4 chars at a time? Find some driver docs!
