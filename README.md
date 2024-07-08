@@ -16,25 +16,26 @@ This file generates a "Hello, World" program which can run in
 [QEMU](https://www.qemu.org/) under the `virt` RISC-V machine.
 You can run it as follows.
 
-First, encode some instructions and write them to `test.bin`:
+First, encode some instructions and write them to `out.bin`:
 
-    $ python3 example.py test.bin
+    $ python3 example.py out.bin
 
-Run `test.bin` on a QEMU `virt` machine using the following command:
+Run `out.bin` on a QEMU `virt` machine using the following command:
 
-    $ qemu-system-riscv64 -nographic -machine virt -bios test.bin
+    $ qemu-system-riscv64 -nographic -machine virt -bios out.bin
     Hello, World!
 
 At this point the QEMU machine will appear to hang; you can bring up a QEMU
 prompt and quit using `C-a c`:
 
-    QEMU 5.2.0 monitor - type 'help' for more information
+    QEMU 9.0.1 monitor - type 'help' for more information
     (qemu) quit
 
-Finally, if you have a RISC-V-aware objdump, you can disassemble the contents of
-`test.bin`:
 
-    $ riscv64-linux-gnu-objdump -b binary --architecture=riscv -D test.bin
+Finally, if you have a RISC-V-aware objdump, you can disassemble the contents of
+`out.bin`:
+
+    $ riscv64-linux-gnu-objdump -b binary --architecture=riscv -D out.bin
       0000000000000000 <.data>:
      0:   00100093                li      ra,1
      4:   01c09093                slli    ra,ra,0x1c
@@ -48,24 +49,48 @@ Finally, if you have a RISC-V-aware objdump, you can disassemble the contents of
 # Running on `sifive_u`
 
 Running on `sifive_u` is a little different: the UART address is at
-`0x10010000`, and we have to write in word-sized chunks. Run like this:
+`0x10010000`, and we have to write in word-sized chunks.
+Run as below, and remember you can use `C-a c` to bring up the console and quit.
 
     $ ./sifive_example.py out.bin
     $ qemu-system-riscv64 -nographic -M sifive_u -bios out.bin
-    HHeelllloo,,  WWoorrlldd!
-    !
+    Hello, World!
+    QEMU 9.0.1 monitor - type 'help' for more information
+    (qemu) quit
 
-Note the repeated output. I think this is because out.bin writes
-a full word `[0x0, 0x0, 0x0, c]` for each character `c`. **TODO!**
+## Notes on `sifive_u`
 
-If you try to write in byte-sized chunks to the UART address, you get no output.
-To see an error, run this:
+The `sifive_u` machine is a little different to `virt`, and so the program
+generated in `sifive_example.py` has some differences.
+Most importantly, the UART is now at `0x10010000`, and we have to write
+word-sized chunks to this address.
+If we only write chars, you can get errors by running with this command:
 
     qemu-system-riscv64 -nographic -M sifive_u -bios out.bin -d guest_errors,unimp,pcall -D qemu.log
 
 Exit using `C-a c quit` and then `head -n 1 qemu.log`:
 
     Invalid write at addr 0x0, size 1, region 'riscv.sifive.uart', reason: invalid size (min:4 max:4)
+
+Writing a full word [0x0, 0x0, 0x0, c] for each character c *almost* works; you
+get output like this:
+
+    HHeelllloo,,  WWoorrlldd!
+    !
+
+This is because `sifive_u` has 2 cores, and they both write to the UART!
+So we have to add an instruction to check our **hardware thread ID** (`hart id`),
+then only print if the ID is `0`.
+To do that, we have the following prelude:
+
+    >riscv64-linux-gnu-objdump -b binary --architecture=riscv -M numeric -D out.bin
+    ...
+    0000000000000000 <.data>:
+       0:   f14020f3                csrr    x1,mhartid
+       4:   fe009ee3                bnez    x1,0x0
+
+This reads the `mhartid` status register into x1, then if x1 is nonzero will go
+into a busy-wait loop.
 
 # Debugging
 
@@ -96,12 +121,6 @@ Instead of typing this all out, you can also just do this:
 
     riscv64-linux-gnu-gdb -x start.gdb
 
-# Bugs
-
-- [ ] Fix `sifive_u` output - write 4 chars at a time? Find some driver docs!
-
-Probably loads more.
-
 # TODO
 
 - [ ] `Instruction.where`
@@ -110,5 +129,8 @@ Probably loads more.
 
 # References
 
-- [Risc-V ISA Reference](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
+- [RISC-V ISA Reference](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
     - See Chapter 24 for a table of instruction encodings
+- [RISC-V Privileged Architecture](https://riscv.org/wp-content/uploads/2017/05/riscv-privileged-v1.10.pdf)
+    - Note that the numeric value of `mhartid` and other status registers can be
+      found in `Table 2.3`
